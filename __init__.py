@@ -1,3 +1,4 @@
+from hashlib import new
 from mycroft import MycroftSkill, intent_handler
 from dataclasses import dataclass, asdict
 import json
@@ -6,11 +7,22 @@ import os
 from typing import List, Dict
 
 
+# Given a model of maximize profit in a factory.
+# The factory produces cars and trucks
+# The profit formula is f(x1,x2) = 10 * x1 + 20 * x2
+# Given the cost constraint
+# 2 * x1 + 5 * x2 <= 20
+# x2 >= 1
+
+# This model has an optimun point on (7.5, 1)
+
+
 @dataclass
 class ModelState():
     fo: float
     constraint: List[float]
     decision_var: List[float]
+    slacks: List[float]
 
 
 class Model():
@@ -46,20 +58,55 @@ class Model():
         return self.constraints_bounds
 
     def solve(self) -> float:
-        return 50.0
+        return 95
+
+    def _get_slack_map(self):
+        return {
+            0: 'costs',
+            1: 'production of cars',
+        }
+
+    def get_slack_text(self) -> str:
+        text = 'The slack values are'
+        state = self.load_state()
+        slacks = state.slacks
+        slack_map = self._get_slack_map()
+
+        for i, value in slack_map.items():
+            text += f'{value} has slack of {slacks[i]}'
+        return text
+
+    def change_constraint(self, constraint, value) -> str:
+        constraint_map = self._get_slack_map()
+        index, _ = next(
+            filter(lambda item: item[1] == constraint, constraint_map.items()))
+
+        state = self.load_state()
+        with open('/dev/shm/debug.txt', 'a') as f:
+            f.write(f'El vector es: {state.constraint}\n')
+            f.write(f'El tipo es: {type(state.constraint)}\n')
+            f.write(f'El index es: {state.constraint[index]}\n')
+            state.constraint[index] += int(value)
+        new_value = state.constraint[index]
+
+        # TODO: solve model with new constraint
+
+        self.save_state(state)
+        return f'Constraint {constraint} updated to {new_value}'
 
     def move_constraint(self, new_constraint: np.array) -> float:
         return 100.0
 
     def _get_state_rep(self) -> ModelState:
         return ModelState(
-            fo=10.0,
-            constraint=[2.0, 3.0],
-            decision_var=[1.5, 3.5]
+            fo=95,
+            constraint=[20, 1],
+            decision_var=[7.5, 1],
+            slacks=[0, 0],
         )
 
-    def save_state(self):
-        state = self._get_state_rep()
+    def save_state(self, state: ModelState = None):
+        state = state or self._get_state_rep()
         with open(self.FILE_PATH, 'w') as f:
             f.write(json.dumps(asdict(state)))
 
@@ -106,6 +153,18 @@ class LinearSolver(MycroftSkill):
         fitness = self.model.solve()
         self.model.save_state()
         self.speak(f'Your benefit will be {fitness} monetary units')
+
+    @intent_handler('change_constraint.intent')
+    def handle_change_constraint(self, message):
+        constraint = message.data.get('constraint')
+        value = message.data.get('value')
+        text = self.model.change_constraint(constraint, value)
+        self.speak(text)
+
+    @intent_handler('slack.intent')
+    def handle_say_slack(self, message):
+        text = self.model.get_slack_text()
+        self.speak(text)
 
     @intent_handler('variables.intent')
     def handle_say_variables(self, message):

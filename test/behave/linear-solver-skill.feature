@@ -19,15 +19,10 @@ Feature: Say model
      When the user says "tell me slack values"
      Then mycroft reply should contain "The slack values are"
    
-   Scenario: User asks for constraints 
-    Given an English speaking user
-     When the user says "What are the constraint values"
-     Then mycroft reply should contain "You cannot have more"
-   
    Scenario: User wants to change a constraint value 
     Given an English speaking user
      When the user says "Change constaint costs to 20"
-     Then mycroft reply should contain "Constraint costs updated to 20"
+     Then mycroft reply should contain "Constraint costs updated"
    
    Scenario: User wants to change a variable value 
     Given an English speaking user
