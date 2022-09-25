@@ -38,7 +38,8 @@ def abstract_model():
     # Objetive function
 
     def obj_expression(nrp):
-        return summation(nrp.profit, nrp.y) - summation(nrp.cost, nrp.x) # maximize profit
+        # maximize profit
+        return summation(nrp.profit, nrp.y) - summation(nrp.cost, nrp.x)
 
     nrp.OBJ = Objective(rule=obj_expression, sense=maximize)
 
@@ -51,13 +52,15 @@ def abstract_model():
     # Defition of precedence constraint
     def precedence_constraint_rule(nrp, i, j):
         return nrp.x[i] >= nrp.x[j]
-    nrp.precedence_constraint = Constraint(nrp.prerequisite, rule=precedence_constraint_rule)
+    nrp.precedence_constraint = Constraint(
+        nrp.prerequisite, rule=precedence_constraint_rule)
 
     # Definition of interest constraint
     # Each tuple in nrp.dat.interest is inverted, so the constraint is also inverted
     def interest_constraint_rule(nrp, i, k):
         return nrp.y[i] <= nrp.x[k]
-    nrp.interest_constraint = Constraint(nrp.interest, rule=interest_constraint_rule)
+    nrp.interest_constraint = Constraint(
+        nrp.interest, rule=interest_constraint_rule)
     nrp.l = ConstraintList()
     return nrp
 
@@ -79,12 +82,13 @@ def Main():
     res = solver.solve(nrp)
     profits = sum(nrp.profit[c] * nrp.y[c].value for c in nrp.customers)
     costs = sum(nrp.cost[r] * nrp.x[r].value for r in nrp.requierements)
-   
 
     res.write()
 
-    print("Profit: ",profits)
-    print("Costs: ",costs)
+    print("Profit: ", profits)
+    print("Costs: ", costs)
+    print(f'Value is: {value(nrp.OBJ)}')
+    print(f'nrp.x are {list(map(lambda v: value(v), nrp.x.values()))}')
 
 
 if __name__ == "__main__":

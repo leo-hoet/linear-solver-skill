@@ -1,10 +1,12 @@
 from hashlib import new
+from pyomo.environ import SolverFactory, value
 from mycroft import MycroftSkill, intent_handler
 from dataclasses import dataclass, asdict
 import json
 import numpy as np
 import os
-from typing import List, Dict
+from typing import List, Dict, Tuple
+from .nrp.nrp import abstract_model
 
 
 # Given a model of maximize profit in a factory.
@@ -32,6 +34,10 @@ class Model():
     def __init__(self):
         self.vars = np.array(2 * [0])
         self.constraints_bounds = np.array(3 * [0])
+        self.instance_model = abstract_model().create_instance(
+            '/opt/mycroft/skills/linear-solver-skill/nrp_100c_140r.dat'
+        )
+        self._nrp_instance = None
 
     def _variables_pos_to_meaning_map(self) -> Dict[int, str]:
         return {
@@ -57,8 +63,16 @@ class Model():
     def actual_constrains_values(self) -> np.array:
         return self.constraints_bounds
 
-    def solve(self) -> float:
-        return 95
+    def solve(self) -> Tuple[float, float]:
+        """Return profits and cost of next iteration"""
+        solver = SolverFactory('cbc')
+        self._nrp_instance = self.instance_model
+        nrp = self._nrp_instance
+        solver.solve(nrp)
+        profits = sum(nrp.profit[c] * nrp.y[c].value for c in nrp.customers)
+        costs = sum(nrp.cost[r] * nrp.x[r].value for r in nrp.requierements)
+        self.save_state()
+        return profits, costs
 
     def _get_slack_map(self):
         return {
@@ -91,8 +105,16 @@ class Model():
 
         # TODO: solve model with new constraint
 
-        self.save_state(state)
+        self.save_state()
         return f'Constraint {constraint} updated to {new_value}'
+
+    def get_next_req_idx(self) -> List[int]:
+        """:raises ValueError:"""
+        model = self._get_state_rep()
+        indexes_with_value = filter(
+            lambda t: t[0] if t[1] == 1 else None, enumerate(model.decision_var))
+        indexes = list(map(lambda t: t[0], indexes_with_value))
+        return indexes
 
     def move_constraint(self, new_constraint: np.array) -> float:
         return 100.0
@@ -105,8 +127,18 @@ class Model():
             slacks=[0, 0],
         )
 
-    def save_state(self, state: ModelState = None):
-        state = state or self._get_state_rep()
+    def save_state(self):
+        nrp = self._nrp_instance
+
+        fo = value(nrp.OBJ)
+        req_to_implement = list(map(lambda v: value(v), nrp.x.values()))
+        state = ModelState(
+            fo=fo,
+            constraint=[],
+            decision_var=req_to_implement,
+            slacks=[]
+        )
+
         with open(self.FILE_PATH, 'w') as f:
             f.write(json.dumps(asdict(state)))
 
@@ -142,7 +174,6 @@ class LinearSolver(MycroftSkill):
 
     def handle_say_slack(self):
         raise NotImplementedError()
-        self.model.get_slacks()
 
     def handle_delete_state(self):
         self.model.delete_state()
@@ -150,9 +181,14 @@ class LinearSolver(MycroftSkill):
 
     def handle_init(self):
         self.model.delete_state()
-        fitness = self.model.solve()
+        profit, cost = self.model.solve()
         self.model.save_state()
-        self.speak(f'Your benefit will be {fitness} monetary units')
+        self.speak(f'Your profit will be {profit} at a cost of {cost} dollars')
+
+    @intent_handler('next_req.intent')
+    def handle_next_req(self):
+        req_index = self.model.get_next_req_idx()
+        self.speak(f'The next requirement to implement are {req_index}')
 
     @intent_handler('change_constraint.intent')
     def handle_change_constraint(self, message):
@@ -183,7 +219,7 @@ class LinearSolver(MycroftSkill):
     def handle_solver_linear(self, message):
         message_utt = message.data.get('utterance', None)
 
-        if message_utt == 'release planning problem':
+        if message_utt == 'next release problem':
             self.handle_init()
             return
         elif message_utt == 'delete state':
