@@ -1,0 +1,3 @@
+[submodule "pareto-front-finder"]
+	path = pareto-front-finder
+	url = git@github.com:giicis/pareto-front-finder.git
