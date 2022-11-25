@@ -1,5 +1,5 @@
 Feature: Say model
-   Scenario: Test test/intent
+   Scenario: Test smoke
     Given an English speaking user
      When the user says "Give me the tomato"
      Then mycroft reply should contain "tomato"
@@ -12,29 +12,23 @@ Feature: Say model
    Scenario: User asks for next requirement to implement 
     Given an English speaking user
      When the user says "What is the next requirement to implement"
-     Then mycroft reply should contain "The next requirement to implement are"
+     Then mycroft reply should contain "The next requirements to implement are"
 
-   Scenario: User asks for variable values 
+   Scenario: User asks for stakeholder satisfaction
     Given an English speaking user
-     When the user says "Variable values of saved model"
-     Then mycroft reply should contain "The variable values are"
-
-   Scenario: User asks for slack values 
-    Given an English speaking user
-     When the user says "tell me slack values"
-     Then mycroft reply should contain "The slack values are"
+     When the user says "Stakeholder satisfaction"
+     Then mycroft reply should contain "Stakeholder satisfied are"
    
-   Scenario: User wants to change a constraint value 
+   Scenario: User asks for costs
     Given an English speaking user
-     When the user says "Change constaint costs to 20"
-     Then mycroft reply should contain "Constraint costs updated"
+     When the user says "How much the implementation will cost"
+     Then mycroft reply should contain "The cost will be"
    
-   Scenario: User wants to change a variable value 
+   Scenario: User asks for state to be deleted
     Given an English speaking user
-     When the user says "Increase cars by one"
-     Then mycroft reply should contain "Done. New benefit is"
-
-   Scenario: User ask for state to be deleted
-    Given an English speaking user
-     When the user says "delete state"
+     When the user says "Delete saved state"
      Then mycroft reply should contain "Internal state deleted"
+
+
+   
+   

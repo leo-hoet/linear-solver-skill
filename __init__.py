@@ -1,4 +1,6 @@
 from hashlib import new
+from re import L
+import re
 from pyomo.environ import SolverFactory, value
 from mycroft import MycroftSkill, intent_handler
 from dataclasses import dataclass, asdict
@@ -8,7 +10,7 @@ import os
 from typing import List, Dict, Tuple
 
 from .pareto_front_finder.nrp import NrpModel
-from .pareto_front_finder.main import run
+from .pareto_front_finder.main import RunResult, run
 
 
 class ModelHandler():
@@ -24,77 +26,84 @@ class ModelHandler():
 
         return res.profit
 
+    def _load_result_from_file(self) -> RunResult:
+        with open(self.NRP_RES_FILE_PATH, 'r') as f:
+            data = f.read()
+        data_dict = json.loads(data)
+        return RunResult(**data_dict)
+
+    def get_next_req_idx(self) -> List[str]:
+        result = self._load_result_from_file()
+        req_indexes_with_none = filter(
+            lambda t: t[1] == '1', enumerate(result.x)
+        )
+        indexes: List[str] = list(
+            map(lambda t: str(t[0]), req_indexes_with_none)
+        )
+        return indexes
+
+    def get_stakeholder_satisfied_idx(self) -> List[str]:
+        result = self._load_result_from_file()
+        stakeholder_indexes_with_none = filter(
+            lambda t: t[1] == '1', enumerate(result.y)
+        )
+        indexes: List[str] = list(
+            map(lambda t: str(t[0]), stakeholder_indexes_with_none)
+        )
+        return indexes
+
+    def delete_internal_state(self):
+        try:
+            os.remove(self.NRP_RES_FILE_PATH)
+        except OSError:
+            pass
+
+    def get_cost(self) -> float:
+        result = self._load_result_from_file()
+        return result.cost
+
 
 class LinearSolver(MycroftSkill):
     def __init__(self):
         MycroftSkill.__init__(self)
         self.model_handler = ModelHandler()
 
-    def handle_change_constraint(self):
-        raise NotImplementedError()
-
-    def handle_say_slack(self):
-        raise NotImplementedError()
-
-    def handle_delete_state(self):
-        self.model.delete_state()
-        self.speak('Internal state deleted')
-
-    def handle_init(self):
-        profit = self.model_handler.run_store_get_profit()
-        self.speak(f'Your profit will be {profit}')
-
     @intent_handler('next_req.intent')
     def handle_next_req(self):
-        req_index = self.model.get_next_req_idx()
-        self.speak(f'The next requirement to implement are {req_index}')
-
-    @intent_handler('change_constraint.intent')
-    def handle_change_constraint(self, message):
-        constraint = message.data.get('constraint')
-        value = message.data.get('value')
-        text = self.model.change_constraint(constraint, value)
-        self.speak(text)
-
-    @intent_handler('slack.intent')
-    def handle_say_slack(self, message):
-        text = self.model.get_slack_text()
-        self.speak(text)
-
-    @intent_handler('variables.intent')
-    def handle_say_variables(self, message):
-        text = self.model.decisions_vars_text()
-        self.speak(text)
+        req_index_all = self.model_handler.get_next_req_idx()
+        req_index_short = req_index_all[:2]
+        indexes = ','.join(req_index_short)
+        self.speak(f'The next requirements to implement are {indexes}')
 
     @intent_handler('test.intent')
-    def handle_test_intent(self, message):
+    def handle_smoke_intent(self, message):
         tomato_type = message.data.get('type')
         if tomato_type:
             self.speak(tomato_type)
         else:
             self.speal('Type not found')
 
+    @intent_handler('stakeholder_satisfaction.intent')
+    def handle_stakeholder_satisfaction_intent(self, message):
+        idxs_all = self.model_handler.get_stakeholder_satisfied_idx()
+        idxs_short = idxs_all[:2]
+        idxs_str = ','.join(idxs_short)
+        self.speak(f'Stakeholder satisfied are {idxs_str}')
+
+    @intent_handler('delete_state.intent')
+    def handle_stakeholder_satisfaction_intent(self, message):
+        self.model_handler.delete_state()
+        self.speak('Internal state deleted')
+
+    @intent_handler('cost.intent')
+    def handle_stakeholder_satisfaction_intent(self, message):
+        cost = self.model_handler.get_cost()
+        self.speak(f'The cost will be {cost} dollares')
+
     @intent_handler('solver.linear.intent')
     def handle_solver_linear(self, message):
-        message_utt = message.data.get('utterance', None)
-
-        if message_utt == 'next release problem':
-            self.handle_init()
-            return
-        elif message_utt == 'delete state':
-            self.handle_delete_state()
-            return
-        elif message_utt == 'variable values of saved model':
-            with open('/dev/shm/vartext.txt', 'a') as f:
-                f.write('Entro aca antes del hadnlesay \n')
-            variable_str = self.handle_say_variables()
-            with open('/dev/shm/vartext.txt', 'a') as f:
-                f.write(variable_str)
-            self.speak(variable_str)
-            return
-
-        # self.speak(solve_model())
-        # self.speak_dialog('solver.linear')
+        profit = self.model_handler.run_store_get_profit()
+        self.speak(f'Your profit will be {profit}')
 
 
 def create_skill():
