@@ -16,9 +16,12 @@ from .pareto_front_finder.main import RunResult, run
 class ModelHandler():
     NRP_RES_FILE_PATH = '/dev/shm/nrp_state.json'
 
-    def run_store_get_profit(self) -> float:
+    def run_store_get_profit(self, max_cost: float = None) -> float:
         model = NrpModel(
             '/opt/mycroft/skills/linear-solver-skill/pareto_front_finder/nrp_100c_140r.dat')
+
+        if max_cost is not None:
+            model.update_cost_constraint(max_cost)
         solver = SolverFactory('cbc')
         res = run(model.model, solver, 0)
         with open(self.NRP_RES_FILE_PATH, 'w') as f:
@@ -102,7 +105,12 @@ class LinearSolver(MycroftSkill):
 
     @intent_handler('solver.linear.intent')
     def handle_solver_linear(self, message):
-        profit = self.model_handler.run_store_get_profit()
+        cost = message.data.get('cost')
+        try:
+            cost = float(cost)
+        except Exception:  # TODO: add better error handling
+            cost = None
+        profit = self.model_handler.run_store_get_profit(max_cost=cost)
         self.speak(f'Your profit will be {profit}')
 
 

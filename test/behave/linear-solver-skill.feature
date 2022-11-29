@@ -33,5 +33,5 @@ Feature: Say model
    Scenario: User ask for problem with cost 
     Given an English speaking user
      When the user says "next release problem with 200 dollars max"
-     Then mycroft reply should contain "985"
+     Then mycroft reply should contain "785"
    
