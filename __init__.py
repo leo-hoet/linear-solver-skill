@@ -91,12 +91,12 @@ class LinearSolver(MycroftSkill):
         self.speak(f'Stakeholder satisfied are {idxs_str}')
 
     @intent_handler('delete_state.intent')
-    def handle_stakeholder_satisfaction_intent(self, message):
-        self.model_handler.delete_state()
+    def handle_delete_intent(self, message):
+        self.model_handler.delete_internal_state()
         self.speak('Internal state deleted')
 
     @intent_handler('cost.intent')
-    def handle_stakeholder_satisfaction_intent(self, message):
+    def handle_cost_intent(self, message):
         cost = self.model_handler.get_cost()
         self.speak(f'The cost will be {cost} dollares')
 

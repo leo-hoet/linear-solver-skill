@@ -16,7 +16,7 @@ Feature: Say model
 
    Scenario: User asks for stakeholder satisfaction
     Given an English speaking user
-     When the user says "Stakeholder satisfaction"
+     When the user says "Client satisfaction"
      Then mycroft reply should contain "Stakeholder satisfied are"
    
    Scenario: User asks for costs
@@ -30,5 +30,8 @@ Feature: Say model
      Then mycroft reply should contain "Internal state deleted"
 
 
-   
+   Scenario: User ask for problem with cost 
+    Given an English speaking user
+     When the user says "next release problem with 200 dollars max"
+     Then mycroft reply should contain "985"
    
