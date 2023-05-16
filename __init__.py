@@ -9,12 +9,14 @@ import numpy as np
 import os
 from typing import List, Dict, Tuple
 
+from exporter import run_result_to_html
 from .pareto_front_finder.nrp import NrpModel
 from .pareto_front_finder.main import RunResult, run
 
 
 class ModelHandler():
     NRP_RES_FILE_PATH = '/dev/shm/nrp_state.json'
+    NRP_HTML_RESULT = '/dev/shm/nrp_html_res.html'
 
     def run_store_get_profit(self, max_cost: float = None) -> float:
         model = NrpModel(
@@ -26,6 +28,10 @@ class ModelHandler():
         res = run(model.model, solver, 0)
         with open(self.NRP_RES_FILE_PATH, 'w') as f:
             json.dump(asdict(res), f)
+
+        with open(self.NRP_HTML_RESULT, 'w') as f:
+            html = run_result_to_html(res)
+            f.write(html)
 
         return res.profit
 
