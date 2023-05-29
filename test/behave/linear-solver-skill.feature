@@ -23,7 +23,12 @@ Feature: Say model
     Given an English speaking user
      When the user says "How much the implementation will cost"
      Then mycroft reply should contain "The cost will be"
-   
+
+   Scenario: User asks where he can see the results
+    Given an English speaking user
+     When the user says "Where i can see the results"
+     Then mycroft reply should contain "The results can be seen in the url"
+
    Scenario: User asks for state to be deleted
     Given an English speaking user
      When the user says "Delete saved state"

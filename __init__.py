@@ -1,27 +1,23 @@
-from hashlib import new
-from re import L
-import re
-from pyomo.environ import SolverFactory, value
+from pyomo.environ import SolverFactory
 from mycroft import MycroftSkill, intent_handler
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 import json
-import numpy as np
 import os
-from typing import List, Dict, Tuple
+from typing import List
 
-from exporter import run_result_to_html
+from .exporter.exporter import run_result_to_html
 from .pareto_front_finder.nrp import NrpModel
 from .pareto_front_finder.main import RunResult, run
 
 
-class ModelHandler():
+class ModelHandler:
     NRP_RES_FILE_PATH = '/dev/shm/nrp_state.json'
-    NRP_HTML_RESULT = '/dev/shm/nrp_html_res.html'
+    HTTP_SERVER_FILE_PATH = '/opt/mycroft/skills/linear-solver-skill/static'
 
     def run_store_get_profit(self, max_cost: float = None) -> float:
         model = NrpModel(
-            '/opt/mycroft/skills/linear-solver-skill/pareto_front_finder/nrp_100c_140r.dat')
-
+            '/opt/mycroft/skills/linear-solver-skill/pareto_front_finder/nrp_100c_140r.dat'
+        )
         if max_cost is not None:
             model.update_cost_constraint(max_cost)
         solver = SolverFactory('cbc')
@@ -29,7 +25,7 @@ class ModelHandler():
         with open(self.NRP_RES_FILE_PATH, 'w') as f:
             json.dump(asdict(res), f)
 
-        with open(self.NRP_HTML_RESULT, 'w') as f:
+        with open(f'{self.HTTP_SERVER_FILE_PATH}/nrp_res.html', 'w') as f:
             html = run_result_to_html(res)
             f.write(html)
 
@@ -108,6 +104,10 @@ class LinearSolver(MycroftSkill):
     def handle_cost_intent(self, message):
         cost = self.model_handler.get_cost()
         self.speak(f'The cost will be {cost} dollares')
+
+    @intent_handler('show_result.intent')
+    def handle_show_result_intent(self, message):
+        self.speak(f'The results can be seen in the url http://localhost:3000/')
 
     @intent_handler('solver.linear.intent')
     def handle_solver_linear(self, message):

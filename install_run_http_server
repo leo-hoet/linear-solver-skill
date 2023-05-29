@@ -1,0 +1,16 @@
+#!/usr/bin/bash
+
+
+HTTP_FILES_PATH='/opt/mycroft/skills/linear-solver-skill/static'
+HTTP_INDEX_PATH="$HTTP_FILES_PATH/index.html"
+# shellcheck disable=SC2089
+INDEX_CONTENT='<h1>Welcome to result page of NRP skill</h1><br/><a href="./nrp_res.html">Results</a>'
+
+
+mkdir -p $HTTP_FILES_PATH && \
+echo "$INDEX_CONTENT" > "$HTTP_INDEX_PATH" && \
+apt update && \
+sudo apt install -y lighttpd && \
+lighttpd -tt -f ./lighttpd/lighttpd.conf && \
+lighttpd -D -f./lighttpd/lighttpd.conf
+
